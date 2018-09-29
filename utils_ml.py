@@ -174,7 +174,7 @@ def plot_cor_heatmap(cor, title=None, cmap='jet', figsize=(10, 7), full=True):
     return fig
 
 
-def plot_rf_fi(rf_model, figsize=(8, 5), plot_direction='h', columns=None, max_fea_plot=None, title=None):
+def plot_rf_fi(rf_model, figsize=(8, 5), plot_direction='h', columns=None, max_cols=None, title=None):
     """ Plot feature importance from a random forest.
     Args:
         plot_direction : direction of the bars (`v` for vertical, `h` for hrozontal)
@@ -189,7 +189,7 @@ def plot_rf_fi(rf_model, figsize=(8, 5), plot_direction='h', columns=None, max_f
     importance = rf_model.feature_importances_
     std = np.std([tree.feature_importances_ for tree in rf_model.estimators_], axis=0)
     indices = np.argsort(importance)[::-1]  # feature indices ordered by importance
-    top_indices = indices[:max_fea_plot]    # get indices of top most important features
+    top_indices = indices[:max_cols]    # get indices of top most important features
     if columns is None:
         columns = top_indices
     else:
