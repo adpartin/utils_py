@@ -132,7 +132,7 @@ def compute_cor_mat(X, zero_diag=False, decimals=None):
         cor : the computed corr dataframe
     """
     X = X.copy()
-    X, _ = drop_low_var_fea(X, th=10**-16)  # required for Spearman rank correlationn
+    X, _ = drop_low_var_cols(X, th=10**-16)  # required for Spearman rank correlationn
 
     if decimals:
         cor = np.around(spearmanr(X).correlation, 4)
@@ -179,7 +179,7 @@ def plot_rf_fi(rf_model, figsize=(8, 5), plot_direction='h', columns=None, max_c
     Args:
         plot_direction : direction of the bars (`v` for vertical, `h` for hrozontal)
         columns : list of columns names (df.columns)
-        max_fea_plot (int) : number of top most important features to plot
+        max_cols (int) : number of top most important features to plot
     Returns:
         indices : all feature indices ordered by importance
         fig : handle for plt figure
@@ -236,7 +236,7 @@ def get_rf_fi(rf_model, columns=None):
     return fi
 
 
-def drop_most_imp_fea(rf_model, df, n):
+def drop_most_imp_cols(rf_model, df, n):
     """ Drop the n most important features from rf model. """
     importance = rf_model.feature_importances_
     indices = np.argsort(importance)[::-1]  # feature indices ordered by importance (descending)
@@ -247,7 +247,7 @@ def drop_most_imp_fea(rf_model, df, n):
     return df, cols_to_drop
 
 
-def drop_least_imp_fea(rf_model, df, n):
+def drop_least_imp_cols(rf_model, df, n):
     """ Drop the n least important features from rf model. """
     importance = rf_model.feature_importances_
     indices = np.argsort(importance)  # feature indices ordered by importance (ascending)
@@ -258,7 +258,7 @@ def drop_least_imp_fea(rf_model, df, n):
     return df, cols_to_drop
 
 
-def drop_low_var_fea(df, th=10**-16, skipna=True, verbose=True):
+def drop_low_var_cols(df, th=10**-16, skipna=True, verbose=True):
     """ Drop cols in which the variance is lower than th.
     Args:
         df : input dataframe
