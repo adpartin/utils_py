@@ -22,7 +22,7 @@ import pandas as pd
 import utils_all as utils_all
 import utils_rnaseq as utils_rnaseq
 
-DATAPATH = '/Users/apartin/work/jdacs/Benchmarks/Data/Pilot1'
+DATADIR = '/vol/ml/apartin/Benchmarks/Data/Pilot1'  # '/Users/apartin/work/jdacs/Benchmarks/Data/Pilot1'
 PDM_METADATA_FILENAME = 'combined_metadata_2018May.txt'
 
 
@@ -47,7 +47,7 @@ def update_target_names(y):
 # ======================================================================================================================
 
 
-def load_lincs1000(dataset='combat', sources=[], meta=True, verbose=True):
+def load_lincs1000(dataset='combat', datadir=DATADIR, sources=[], meta=True, verbose=True):
 	""" Load lincs1000.
 	TODO: convert this to class.
 	"""
@@ -60,19 +60,20 @@ def load_lincs1000(dataset='combat', sources=[], meta=True, verbose=True):
 	else:
 		raise ValueError(f'The passed dataset ({DATASET}) is not supprted.')
 
-	df_rna = pd.read_csv(os.path.join(DATAPATH, DATASET), sep='\t')
+	df_rna = pd.read_csv(os.path.join(datadir, DATASET), sep='\t')
 
 	if sources:
 		df_rna = utils_rnaseq.extract_specific_datasets(df_rna, datasets_to_keep=sources)
 
 	if meta:
-		meta = pd.read_csv(os.path.join(DATAPATH, PDM_METADATA_FILENAME), sep='\t')
+		meta = pd.read_csv(os.path.join(datadir, PDM_METADATA_FILENAME), sep='\t')
 		meta = utils_rnaseq.update_metadata_comb_may2018(meta)
 		df_rna, meta = utils_rnaseq.update_df_and_meta(df_rna, meta, on='Sample')
 	else:
 		meta = None
 
 	if verbose:
+		print(f'\nDataset: {DATASET}')
 		print(f'df_rna {df_rna.shape}')
 		if meta is not None:
 			print(f'meta   {meta.shape}')

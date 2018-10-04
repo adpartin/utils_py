@@ -132,7 +132,7 @@ def compute_cor_mat(X, zero_diag=False, decimals=None):
         cor : the computed corr dataframe
     """
     X = X.copy()
-    X, _ = drop_low_var_cols(X, th=10**-16)  # required for Spearman rank correlationn
+    X, _ = drop_low_var_cols(X, th=10**-16, verbose=False)  # required for Spearman rank correlationn
 
     if decimals:
         cor = np.around(spearmanr(X).correlation, 4)
@@ -228,7 +228,7 @@ def get_rf_fi(rf_model, columns=None):
     if columns is None:
         columns = range(len(importance))
 
-    fi = pd.DataFrame({'col': columns, 'imp': importance, 'std': std})
+    fi = pd.DataFrame({'cols': columns, 'imp': importance, 'std': std})
     
     fi.sort_values('imp', ascending=False, inplace=True)
     fi.reset_index(drop=False, inplace=True)
@@ -267,6 +267,7 @@ def drop_low_var_cols(df, th=10**-16, skipna=True, verbose=True):
         df : updated dataframe
         idx : indexes of the dropped columns
     """
+    # TODO: modify the function to accept numpy array in addition to dataframe
     assert not df.empty, "df is empty."
     df = df.copy()
 
