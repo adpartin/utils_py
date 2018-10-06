@@ -95,29 +95,38 @@ def drop_samples_on_class_count(df, y, min_class_size=100):
     return df_out, df_out_small
 
 
-def plot_confusion_matrix(y_true, y_pred, labels=None, title=None, savefig=False, img_name='confusion'):
+def plot_confusion_matrix(y_true, y_pred, labels=None, figsize=None, title=None,
+                          savefig=False, img_name='confusion'):
     """ Create a confusion matrix for a classification results.
     Args:
         labels : list of unique label names
     Returns:
         df_conf : df of confusion matrix
+    https://matplotlib.org/gallery/images_contours_and_fields/image_annotated_heatmap.html
     """
     np_conf = confusion_matrix(y_true, y_pred)
     df_conf = pd.DataFrame(np_conf, index=labels, columns=labels)
 
-    m = df_conf.shape[0]
+    fontsize = 10  # font size of labels (not table numbers)
+    if figsize is None:
+        sc_x, sc_y = 0.5, 0.5
+        figsize = sc_x * df_conf.shape[1], sc_y * df_conf.shape[0]
 
-    fontsize=25  # font size of labels (not in table numbers)
-    plt.figure(figsize=(m, m))
-    sns.set(font_scale=2.0)
-    sns.heatmap(df_conf, annot=True, fmt='d', linewidths=0.9, cmap='Greens', linecolor='white')
-    plt.ylabel('true label', fontsize=fontsize)
-    plt.xlabel('predicted label', fontsize=fontsize)
+    fig, ax = plt.subplots(figsize=figsize)
+    #sns.set(font_scale=2.0)
+    sns.heatmap(df_conf, annot=True, annot_kws={"size": fontsize}, fmt='d',
+                linewidths=0.99, cmap='Greens', linecolor='white')
+    ax.set_ylabel('True', fontsize=fontsize)
+    ax.set_xlabel('Predicted', fontsize=fontsize)
+    ax.set_xticklabels(labels, fontsize=fontsize)
+    ax.set_yticklabels(labels, fontsize=fontsize)
+    # fig.tight_layout()
+
     if title:
-        plt.title(title, fontsize=fontsize)
+        ax.set_title(title, fontsize=fontsize)
 
     if savefig:
-        plt.savefig(img_name, bbox_inches='tight')
+        fig.savefig(img_name, bbox_inches='tight')
 
     return df_conf
 
@@ -146,19 +155,31 @@ def compute_cor_mat(X, zero_diag=False, decimals=None):
     return cor
 
 
-def plot_cor_heatmap(cor, title=None, cmap='jet', figsize=(10, 7), full=True):
+def plot_cor_heatmap(cor, value_range=[-1, 1], title=None, cmap='jet', figsize=None, full=True):
     """ TODO : This function runs too long for large arrays.
     Implement with regular matplotlib(??).
+    https://matplotlib.org/gallery/images_contours_and_fields/image_annotated_heatmap.html
     """
-    fig, ax = plt.subplots(figsize=figsize)
-   
+    if len(value_range)==2:
+        vmin, vmax = value_range
+    else:
+        vmin, vmax = cor.min().min(), cor.max().max()
+
+    fontsize = 8
+    if figsize is None:
+        sc_x, sc_y = 0.5, 0.5
+        figsize = sc_x*cor.shape[1], sc_y*cor.shape[0]
+
+    fig, ax = plt.subplots(figsize=(sc_x * cor.shape[1], sc_y * cor.shape[0]))
     if full == True:
-        ax = sns.heatmap(cor, cmap=cmap, annot=True, fmt='.2f')
+        ax = sns.heatmap(cor, vmin=vmin, vmax=vmax, cmap=cmap, annot=True, annot_kws={"size": fontsize},
+                         fmt='.2f', linewidths=0.99, linecolor='white')
     else:
         mask = np.zeros_like(cor)
         # mask[np.triu_indices_from(mask)] = True
         mask[np.tril_indices_from(mask)] = True
-        ax = sns.heatmap(cor, cmap=cmap, annot=True, fmt='.2f', mask=mask)
+        ax = sns.heatmap(cor, vmin=vmin, vmax=vmax, cmap=cmap, annot=True, annot_kws={"size": fontsize},
+                         fmt='.2f', linewidths=0.99, linecolor='white', mask=mask)        
         
     # ax.invert_yaxis()
     ax.xaxis.tick_top()

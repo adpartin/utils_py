@@ -74,7 +74,7 @@ def plot_keras_learning(history, figsize = (10, 8), savefig=True, img_name='lear
         history (keras callbacks) : return callback object from keras model tranining model.fit()
     """
     import matplotlib.pyplot as plt
-    plt.rcParams['figure.figsize'] = figsize
+    ##plt.rcParams['figure.figsize'] = figsize
     legend_fontsize = 10
     fontsize = 12
     markersize = 5
@@ -86,7 +86,7 @@ def plot_keras_learning(history, figsize = (10, 8), savefig=True, img_name='lear
     # Extract names of all recorded performance metrics for training and val sets
     pr_metrics = get_keras_performance_metrics(history)
 
-    fig = plt.figure()
+    fig = plt.figure(figsize)
     for p, m in enumerate(pr_metrics):
         ax = fig.add_subplot(len(pr_metrics), 1, p + 1)
 
