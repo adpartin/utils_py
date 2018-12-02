@@ -187,7 +187,7 @@ def plot_cor_heatmap(cor, value_range=[-1, 1], title=None, cmap='jet', figsize=N
         sc_x, sc_y = 0.5, 0.5
         figsize = sc_x * cor.shape[1], sc_y * cor.shape[0]
 
-    fig, ax = plt.subplots(figsize=(sc_x * cor.shape[1], sc_y * cor.shape[0]))
+    fig, ax = plt.subplots(figsize=figsize)
     if full == True:
         ax = sns.heatmap(cor, vmin=vmin, vmax=vmax, cmap=cmap, annot=True, annot_kws={"size": fontsize},
                          fmt='.2f', linewidths=0.99, linecolor='white')
@@ -309,6 +309,22 @@ def drop_least_imp_cols(rf_model, df, n):
     return df, cols_to_drop
 
 
+def dropna(df, axis=0, th=0.4):
+    """ Drop rows or cols based on the ratio of NA values along the axis.
+    Args:
+        df : input df
+        th (float) : if the ratio of NA values along the axis is larger that th, then drop all the values
+        axis (int) : 0 to drop rows; 1 to drop cols
+    Returns:
+        df : updated df
+    """
+    df = df.copy()
+    axis = 0 if axis==1 else 1
+    col_idx = df.isna().sum(axis=axis)/df.shape[axis] <= th
+    df = df.iloc[:, col_idx.values]
+    return df
+
+
 def drop_low_var_cols(df, th=10**-16, skipna=True, verbose=True):
     """ Drop cols in which the variance is lower than th.
     Args:
@@ -319,13 +335,11 @@ def drop_low_var_cols(df, th=10**-16, skipna=True, verbose=True):
         idx : indexes of the dropped columns
     """
     # TODO: modify the function to accept numpy array in addition to dataframe
-    assert not df.empty, "df is empty."
     df = df.copy()
-
     idx = df.var(axis=0, skipna=skipna) <= th
     df = df.loc[:, ~idx]
     if verbose:
-        print(f'{np.sum(idx)} cols out of {len(idx)} were dropped based on col variance (th={th}).')
+        print(f'Dropped {np.sum(idx)} cols out of {len(idx)} based on col variance (th={th}).')
 
     return df, idx    
 
@@ -389,6 +403,54 @@ def drop_cols_on_cor(df, th=0.95, verbose=True):
         print(f"\n{col_len-len(df.columns)} cols were dropped based on high xcorr between cols (th={th}).")
 
     return df, corr, cols_dropped
+
+
+def contingency_table(df, cols, to_plot=True, figsize=None, title=None, margins=False, normalize=False):
+    """
+    Args:
+        df : df with categorical 
+        cols (list) : list of column names for which to generate the contingency table
+        to_plot : whether to plot the contingency table
+        margins (bool) : arg for pd.crosstab; whether to include row/column margins (subtotals)
+        normalize : arg for pd.crosstab; whether to normalize (‘all’, ‘index’, ‘columns’) or False
+    Returns:
+        table (df) : contingency table
+    https://hamelg.blogspot.com/2015/11/python-for-data-analysis-part-19_17.html
+    """
+    assert len(cols) == 2, 'Exactly two column names should be in the list.'
+    assert set(cols).issubset(set(df.columns)), "`cols` are not in df.columns."
+    table = df[cols].copy()
+    # table['ones'] = 1
+    # table = pd.pivot_table(table, index=cols[0], columns=cols[1], values='ones',
+    #                        aggfunc=np.sum, fill_value=0)
+    table = pd.crosstab(index=df[cols[0]], columns=df[cols[1]],
+                        margins=margins, normalize=normalize)
+    table.index.name = None
+    table.columns.name = None
+
+    if to_plot:
+        fontsize = 20
+        if figsize is None:
+            fontsize = 10
+            sc_x, sc_y = 0.5, 0.5
+            figsize = sc_x * table.shape[1], sc_y * table.shape[0]
+
+        fig, ax = plt.subplots(figsize=figsize)
+        # sns.set(font_scale=1.6)
+        if normalize:
+            ax = sns.heatmap(table, annot=True, linewidths=0.9, cmap='Greens', annot_kws={"size": fontsize})
+        else:
+            ax = sns.heatmap(table, annot=True, fmt='d', linewidths=0.9, cmap='Greens', annot_kws={"size": fontsize})
+        colnames = table.columns.tolist()
+        rownames = table.index.tolist()
+        ax.set_xticklabels(colnames, rotation=80, fontsize=fontsize)
+        ax.set_yticklabels(rownames, rotation=0, fontsize=fontsize)
+        # print(table)
+
+        if title:
+            ax.set_title(title, fontsize=fontsize)
+
+    return table
 
 
 def plot_pca(df, components=[1, 2], figsize=(8, 5),

@@ -11,7 +11,7 @@ import matplotlib
 # matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-matplotlib.rcParams['font.size'] = 16
+matplotlib.rcParams['font.size'] = 14
 
 import seaborn as sns
 
@@ -46,27 +46,29 @@ DATA_URL = 'http://ftp.mcs.anl.gov/pub/candle/public/benchmarks/Pilot1/combo/'
 
 # ======================================================================================================================
 class kNNrnaseq():
-    """ Computes the closest neighbors across datasets/sources/studies.
+    """ Compute the closest neighbors across sources/studies.
     Args:
         df_train : training set
-        df_test : test set; for each sample in df_query a total of n_neighbors from df_nbrs are found
+        df_test : for each sample in test set (df_query) a total of n_neighbors closest nbrs
+                  from df_train (df_nbrs) are found
         meta_train : 
         meta_test : 
-        label : name (str) of a col in dataframes (e.g. 'tissue') based on which we present the
-                computed neighbors in the returned dataframe which sumarizes the results
-        n_neighbors : number of neighbors to extract
-        ref_col_name : ref col based on which query samples (e.g., 'Sample')
-        algorithm : 
-        metric : distance metric
+        label (str) : `label` is a col name that both meta_train and meta_test have (e.g. phenotype: 'ctype').
+                      The returned table knn_labels shows the label for each query sample
+                      and the corresling neighbors.
+        n_neighbors (int) : number of neighbors to find
+        ref_col_name (str) : ref col name based on which query samples (default: 'Sample')
+        algorithm (str) : 
+        metric (str) : distance metric
 
     Returns:
-        dd_label : dataframe where each row corresponds to a sample in the test set (df_query);
-            each row contains the value of eval_col_name of each nbr
+        dd_label (df) : df where each row corresponds to a sample in the test set (df_query);
+                        each row contains the value of eval_col_name of each nbr
     """
     # TODO : write test code with some of the sklearn datasets (!!)
     def __init__(self, df_train, meta_train,
                  df_test=None, meta_test=None,
-                 label=None, ref_col_name = None,
+                 ref_col_name='Sample', label=None, 
                  n_neighbors=5, algorithm='auto',
                  metric='minkowski', p=2,
                  metric_params=None):
@@ -88,26 +90,27 @@ class kNNrnaseq():
             
         if ref_col_name is not None:
             self.ref_col_name = ref_col_name
-        else:
-            self.ref_col_name = 'Sample'
-            
-        self.label = label
+        
+        if label is not None:
+            self.label = label
+
         self.n_neighbors = n_neighbors
         self.algorithm = algorithm
         self.metric = metric
         self.p = p
         self.metric_params = metric_params
 
-        self.pred_dist = []
-        self.pred_indices = []
+        self.pred_dist = []     # distances from the predicted nbrs
+        self.pred_indices = []  # indices of the predicted nbrs
 
-        # Create an instance of kNN model
+        # kNN model
         self.knn_model = NearestNeighbors(n_neighbors=self.n_neighbors,
                                           algorithm=self.algorithm,
                                           metric=self.metric,
                                           p=self.p,
                                           metric_params=self.metric_params,
                                           n_jobs=-1)
+
 
     def fit(self):
         # Training data (e.g. cell lines)
@@ -116,89 +119,102 @@ class kNNrnaseq():
         # Train the model (knn just stores the samples)
         self.knn_model.fit(tr_values)
 
+
     def neighbors(self):
-        # Compute the k nearest nbrs for each sample in the query/test dataset (e.g. PDM)
+        """ Generate 3 tables that summarize the results.
+        knn_samples :
+            df that stores the sample names of the closest nbrs
+            columns = [ref_col_name, nbr1, ..., nbrk]
+        knn_distances :
+            df that stores the distances of the closest nbrs from the sample
+            columns = [ref_col_name, nbr1, ..., nbrk]
+        knn_labels :
+            df that stores the label (e.g. tissue type) of the closest nbrs
+            columns = [ref_col_name, 'label', 'match_total', nbr1, ..., nbrk]
+        """
+        # Compute k nearest nbrs for each sample in the test (query) dataset (e.g. PDM)
         te_values = self.df_test.iloc[:, 1:].values
         self.pred_dist, self.pred_indices = self.knn_model.kneighbors(te_values)
 
-        # ===== Create dataframes that summarize the results =====
-        # The dataframes can look as follows:
-        # -------
-        # -------
-        # -------
-        # -------
-        # --------------------------------------------------------
         n_test_samples = self.df_test.shape[0]
 
         # --- df with Sample names ---
-        # Dataframe that stores the sample names of the closest nbrs
-        table_samples = pd.DataFrame(index=range(n_test_samples),
-                                     columns=[self.ref_col_name] + ['nbr {}'.format(n) for n in range(self.n_neighbors)])
-                                       # list(np.arange(self.n_neighbors))
+        knn_samples = pd.DataFrame(index=range(n_test_samples),
+                                     columns=[self.ref_col_name] + [f'nbr{n}' for n in range(self.n_neighbors)])
 
         # --- df with distances ---
-        table_distances = pd.DataFrame(index=range(n_test_samples),
-                                       columns=[self.ref_col_name] + ['nbr {}'.format(n) for n in range(self.n_neighbors)])
+        knn_distances = knn_samples.copy()
+        # knn_distances = pd.DataFrame(index=range(n_test_samples),
+        #                              columns=[self.ref_col_name] + [f'nbr{n}' for n in range(self.n_neighbors)])
 
+        # --- df with label names ---
         if self.label:
-            # --- df with label names ---
-            # Dataframe that stores the label (e.g. tissue type) of the closest nbrs
             # columns=[self.ref_col_name, 'label', 'match_total', 'match_total_wgt', 'match_first'] +
             #                                     ['nbr {}'.format(n) for n in range(self.n_neighbors)]
-            table_labels = pd.DataFrame(index=range(n_test_samples),
-                                        columns=[self.ref_col_name, 'label', 'match_total'] +
-                                                ['nbr {}'.format(n) for n in range(self.n_neighbors)])
+            knn_labels = pd.DataFrame(index=range(n_test_samples),
+                                      columns=[self.ref_col_name, 'label', 'total_matches'] +
+                                              [f'nbr{n}' for n in range(self.n_neighbors)])
+            # knn_labels = knn_samples.copy()
+            # knn_labels.insert(loc=1, column='label', value=None)
+            # knn_labels.insert(loc=2, column='match_total', value=None)
 
         for i in range(n_test_samples):  # iter over test/query samples
-            query_sample_name = self.meta_test.loc[i, self.ref_col_name]  # get query sample name
-            k_nbrs = self.meta_train.iloc[self.pred_indices[i], :]  # get the nbrs (train) for the current query (test) sample
+            query_sample_name = self.meta_test.loc[i, self.ref_col_name]  # get test (query) sample name
+            k_nbrs = self.meta_train.iloc[self.pred_indices[i], :]  # get the nbrs (train) for the current test (query) sample
 
             # Assign to samples table
-            table_samples.loc[i, self.ref_col_name] = query_sample_name  # assign query sample name
-            table_samples.iloc[i, -self.n_neighbors:] = k_nbrs.loc[:, self.ref_col_name].values  # assign the neighbors sample name
+            knn_samples.loc[i, self.ref_col_name] = query_sample_name  # assign test (query) sample name
+            ##knn_samples.iloc[i, -self.n_neighbors:] = k_nbrs.loc[:, self.ref_col_name].values  # assign the neighbors sample name
+            knn_samples.iloc[i, -self.n_neighbors:] = k_nbrs[self.ref_col_name].values  # assign the neighbors sample name
 
             # Assign to distances table
-            table_distances.loc[i, self.ref_col_name] = query_sample_name  # assign query sample name
-            table_distances.iloc[i, -self.n_neighbors:] = self.pred_dist[i, :]  # distances across all k nbrs
-            # table_distances.iloc[i, -self.n_neighbors:] = self.pred_dist[i, :] / self.pred_dist[i, :].sum()  # normalize distances across all k nbrs
+            knn_distances.loc[i, self.ref_col_name] = query_sample_name  # assign test (query) sample name
+            knn_distances.iloc[i, -self.n_neighbors:] = self.pred_dist[i, :]  # distances across all k nbrs
+            # knn_distances.iloc[i, -self.n_neighbors:] = self.pred_dist[i, :] / self.pred_dist[i, :].sum()  # normalize distances across all k nbrs
 
             # Assign to labels table
             if self.label:
-                table_labels.loc[i, self.ref_col_name] = query_sample_name  # assign query sample name
+                knn_labels.loc[i, self.ref_col_name] = query_sample_name  # assign test (query) sample name
                 query_label = self.meta_test.loc[i, self.label]
                 
-                table_labels.loc[i, 'label'] = query_label
-                table_labels.iloc[i, -self.n_neighbors:] = k_nbrs.loc[:, self.label].values
+                knn_labels.loc[i, 'label'] = query_label  # label of the test (query) sample
+                ##knn_labels.iloc[i, -self.n_neighbors:] = k_nbrs.loc[:, self.label].values
+                knn_labels.iloc[i, -self.n_neighbors:] = k_nbrs[self.label].values
                 n_matches = k_nbrs[self.label].tolist().count(query_label)
-                table_labels.loc[i, 'match_total'] = n_matches
-                # table_labels.loc[i, 'match_first'] = 1 if k_nbrs.loc[:, self.label].values[0] == query_label else 0
-                # table_labels.loc[i, 'bingo'] = 1 if num_matches == self.n_neighbors else 0
+                knn_labels.loc[i, 'total_matches'] = n_matches
+                # knn_labels.loc[i, 'match_first'] = 1 if k_nbrs.loc[:, self.label].values[0] == query_label else 0
+                # knn_labels.loc[i, 'bingo'] = 1 if num_matches == self.n_neighbors else 0
 
-                # todo: come up with a new weighting method
+                # TODO: come up with a new weighting method
                 val = 0
-                D = self.pred_dist[i, :].sum()  # sum across all the calculated distances of the k nbrs
-                for ii, lbl in enumerate(k_nbrs.loc[:, self.label].values):
+                D = self.pred_dist[i, :].sum()  # sum across all distances of the k nbrs
+                for ii, lbl in enumerate(k_nbrs[self.label].values):
                     if lbl == query_label:
                         val += self.pred_dist[i, ii] / D
-                # table_labels.loc[i, 'match_total_wgt'] = val
+                # knn_labels.loc[i, 'match_total_wgt'] = val
 
-        self.table_samples = table_samples
-        self.table_distances = table_distances
-        self.table_labels = table_labels
+        self.knn_samples = knn_samples
+        self.knn_distances = knn_distances
+        if self.label:
+            self.knn_labels = knn_labels
+
 
     def print_results(self):
-        print(self.table_labels.sort_values(['label']))
+        if hasattr(self, 'knn_labels'):
+            print(self.knn_labels.sort_values(['label']))
+
 
     def summary(self):
-        print('Total match: {}'.format(self.table_labels['match_total'].sum()))
-        # print('Total match weighted: {:.2f}'.format(self.table_labels['match_total_wgt'].sum()))
-        # print('Total 1st match: {}'.format(self.table_labels['match_first'].sum()))
-        # print('Total bingo: {}'.format(self.table_labels['bingo'].sum()))
+        if hasattr(self, 'knn_labels'):
+            n_matches = self.knn_labels['total_matches'].sum()
+            possible_matches = self.n_neighbors * self.df_test.shape[0]
+            print(f'Total {n_matches} matches out of {possible_matches} ({n_matches/possible_matches:.3f}).')
+
 
     def save_to_file(self, filename='knn.csv'):
         # Merge tables horizontally and save
-        tmp1 = self.table_labels.sort_values(['label'])
-        tmp2 = self.table_samples.reindex(tmp1.index)
+        tmp1 = self.knn_labels.sort_values(['label'])
+        tmp2 = self.knn_samples.reindex(tmp1.index)
         tmp1[' '] = None  # add one blank column for readability of csv
         tmp = pd.concat([tmp1, tmp2], axis=1)
 
@@ -235,7 +251,9 @@ class kNNrnaseq():
 
 
 def load_combined_rnaseq(dataset, chunksize=1000, verbose=False):
-    """ Load combined RNA-Seq dataframe. """
+    """ Load combined RNA-Seq dataframe.
+    TODO: remove; not using
+    """
     # non_numeric_cols = ['Sample']
     # df = read_file_by_chunks(dataset, chunksize=chunksize, sep='\t', non_numeric_cols=non_numeric_cols)
     df = pd.read_csv(dataset, sep='\t')
@@ -251,6 +269,7 @@ def update_metadata_comb(meta):
     """ Update metadata for the combined RNA-Seq.
     Remove "irrelevant" columns.
     Use ANL naming conventions (e.g. GDC rather than TCGA).
+    TODO: move to the class dataset (but not using)
     """
     # Drop columns (Judith's clustering and LANL names)
     meta = meta.drop(columns=['lanl_sample_name',
@@ -280,6 +299,7 @@ def update_metadata_comb_may2018(meta):
     /nfs/nciftp/private/tmp/jcohn/metadataForRNASeq2018Apr/combined_metadata_2018May.txt
     Remove "irrelevant" columns.
     Use ANL naming conventions (e.g. GDC rather than TCGA).
+    TODO: move to the class dataset
     """
     # Rename columns
     meta = meta.rename(columns={'sample_name': 'Sample',
@@ -302,7 +322,9 @@ def update_metadata_comb_may2018(meta):
 
 
 def update_df_and_meta(df_rna, meta, on='Sample'):
-    """ Update df_rna and metadata to match. """
+    """ Update df_rna and metadata to match.
+    TODO: move to the class dataset
+    """
     df_rna = df_rna.copy()
     meta = meta.copy()
     df = pd.merge(meta, df_rna, how='inner', on=on).reset_index(drop=True)
@@ -316,6 +338,7 @@ def extract_specific_datasets(df, datasets_to_keep=[]):
     """ Extract samples of the specified data sources.
     Args:
         datasets_to_keep : list of strings indicating the datasets/sources/studies to keep
+    TODO: move to the class dataset
     """
     df = df.copy()
     # datasets_to_keep = ['gdc', 'ccle', 'ncipdm', 'nci60']
@@ -355,7 +378,7 @@ def scale_rnaseq(df, per_source=False):
 
 def copy_rna_profiles_to_cell_lines(df_rna, cl_mapping):
     """
-    Use mapping to copy ccle and nci60 gene expression to gdsp, gcsi, and ctrp.
+    Use mapping to copy ccle and nci60 gene expression to gdsc, gcsi, and ctrp.
     Args:
         df_rna : df which contains only datasets that have their original rna expression data
         cl_mapping : contains cell line mappings that are used to generate new samples for which
@@ -382,29 +405,6 @@ def copy_rna_profiles_to_cell_lines(df_rna, cl_mapping):
     return df
 
 
-def gen_contingency_table(df, cols, to_plot=True, figsize=(25, 2)):
-    """
-    df : dataframe
-    cols (str) : list of column names on which to generate the contingency table
-    to_plot : whether to plot the contingency table
-    """
-    assert len(cols) == 2, 'Exactly to column names should be as a list.'
-    table = df[cols].copy()
-    table['ones'] = 1
-    table = pd.pivot_table(table, index=cols[0], columns=cols[1], values='ones',
-                           aggfunc=np.sum, fill_value=0)
-    table.index.name = None
-    table.columns.name = None
-
-    if to_plot:
-        sns.set(font_scale=1.6)
-        plt.figure(figsize=figsize)
-        sns.heatmap(table, annot=True, fmt='d', linewidths=0.9, cmap='Greens')
-        # print(table)
-
-    return table
-
-
 def get_union(df, meta, base_col, pivot_col, to_plot=True):
     """ Returns a dataframe in which a union is taken on pivot_col with respect to base_col.
     This can be done with groupby (look at fastai).
@@ -429,8 +429,7 @@ def get_union(df, meta, base_col, pivot_col, to_plot=True):
     return tissue_table, df, meta
 
 
-
-# Are these still used ???
+# TODO: Are these still used ???
 def ap_combat(df_rna, meta):
     """ ... """
     dat, pheno, _, _ = py_df_to_R_df(data = df_rna,

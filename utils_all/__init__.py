@@ -16,7 +16,6 @@ from utils_rnaseq import update_df_and_meta
 from utils_rnaseq import extract_specific_datasets
 from utils_rnaseq import scale_rnaseq
 from utils_rnaseq import copy_rna_profiles_to_cell_lines
-from utils_rnaseq import gen_contingency_table
 from utils_rnaseq import get_union
 from utils_rnaseq import ap_combat
 from utils_rnaseq import R_df_to_py_df
@@ -34,8 +33,10 @@ from utils_ml import plot_rf_fi
 from utils_ml import get_rf_fi
 from utils_ml import drop_most_imp_cols
 from utils_ml import drop_least_imp_cols
+from utils_ml import dropna
 from utils_ml import drop_low_var_cols
 from utils_ml import drop_cols_on_cor
+from utils_ml import contingency_table
 from utils_ml import plot_pca
 
 
@@ -53,4 +54,5 @@ from combat import combat
 
 # import from create_datasets
 from datasets import load_lincs1000
+from datasets import CombinedRNASeqLINCS
 

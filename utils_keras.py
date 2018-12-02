@@ -67,7 +67,7 @@ def add_another_y_axis(ax, x, y, color='g', marker='o', yscale='linear', y_axis_
     return ax2
 
 
-def plot_keras_learning(history, figsize = (10, 8), savefig=True, img_name='learning_with_lr'):
+def plot_keras_learning(history, figsize=(10, 8), savefig=True, img_name='learning_with_lr'):
     """ Plot the learning progress for all the recorded metrics. This function should be used with
     hold-out validation scheme since it allows to plot learning rate on a separate axis.
     Args:
@@ -86,7 +86,7 @@ def plot_keras_learning(history, figsize = (10, 8), savefig=True, img_name='lear
     # Extract names of all recorded performance metrics for training and val sets
     pr_metrics = get_keras_performance_metrics(history)
 
-    fig = plt.figure(figsize)
+    fig = plt.figure(figsize=figsize)
     for p, m in enumerate(pr_metrics):
         ax = fig.add_subplot(len(pr_metrics), 1, p + 1)
 
@@ -111,7 +111,7 @@ def plot_keras_learning(history, figsize = (10, 8), savefig=True, img_name='lear
         if 'lr' in hh.keys():
             _ = add_another_y_axis(ax=ax, x=epochs, y=hh['lr'], color='g', marker='o', yscale='log', y_axis_name='Learning Rate')
 
-    ax.set_xlabel('epochs', fontsize=fontsize)
+    ax.set_xlabel('Epochs', fontsize=fontsize)
 
     if savefig:
         plt.savefig(img_name, bbox_inches='tight')
