@@ -24,7 +24,7 @@ import utils_rnaseq as utils_rnaseq
 
 # DATADIR = '/vol/ml/apartin/Benchmarks/Data/Pilot1'
 DATADIR = '/Users/apartin/work/jdacs/Benchmarks/Data/Pilot1'
-METADATA_FILENAME = 'combined_metadata_2018May.txt'
+CELLMETA_FILENAME = 'combined_metadata_2018May.txt'
 
 na_values = ['na', '-', '']
 
@@ -45,7 +45,8 @@ def update_target_names(y):
 # ======================================================================================================================
 class CombinedRNASeqLINCS():
     """ Combined LINCS dataset. """
-    def __init__(self, datadir=DATADIR, dataset='combat', metadata_filename=METADATA_FILENAME, sources=[], verbose=True):
+    def __init__(self, datadir=DATADIR, dataset='combat', cellmeta_filename=CELLMETA_FILENAME, sources=[],
+                 na_values=['na', '-', ''], verbose=True):
         """ Note that df_rna file must have the following structure:
         df_rna.columns[0] --> 'Sample'
         df_rna.columns[1:] --> gene names
@@ -55,7 +56,7 @@ class CombinedRNASeqLINCS():
         Example:
             DATADIR = '/Users/apartin/work/jdacs/Benchmarks/Data/Pilot1'
             METADATA_FILENAME = 'combined_metadata_2018May.txt'
-            lincs = CombinedLINCS(dataset='combat', datadir=DATADIR, metadata_filename=METADATA_FILENAME)
+            lincs = CombinedLINCS(dataset='combat', datadir=DATADIR, cellmeta_filename=CELLMETA_FILENAME)
         """
         if dataset == 'raw':
             DATASET = 'combined_rnaseq_data_lincs1000'
@@ -75,7 +76,7 @@ class CombinedRNASeqLINCS():
         df_rna = self._keep_sources(df_rna, sources=sources) 
 
         # Load metadata
-        meta = pd.read_table(os.path.join(datadir, metadata_filename), sep='\t')
+        meta = pd.read_table(os.path.join(datadir, cellmeta_filename), sep='\t')
         meta = self._update_metadata_comb_may2018(meta)
         
         # Merge df_rna and meta
@@ -215,7 +216,7 @@ def load_lincs1000(dataset='combat', datadir=DATADIR, sources=[], meta=True, ver
 		df_rna = utils_rnaseq.extract_specific_datasets(df_rna, datasets_to_keep=sources)
 
 	if meta:
-		meta = pd.read_csv(os.path.join(datadir, METADATA_FILENAME), sep='\t')
+		meta = pd.read_csv(os.path.join(datadir, CELLMETA_FILENAME), sep='\t')
 		meta = utils_rnaseq.update_metadata_comb_may2018(meta)
 		df_rna, meta = utils_rnaseq.update_df_and_meta(df_rna, meta, on='Sample')
 	else:

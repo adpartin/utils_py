@@ -471,7 +471,7 @@ def plot_pca(df, components=[1, 2], figsize=(8, 5),
     https://stackoverflow.com/questions/12236566/setting-different-color-for-each-series-in-scatter-plot-on-matplotlib
     """
     if color_vector is not None:
-        assert len(df) == len(color_vector), 'len(df) and len(color_vector) shuold be the same size.'
+        assert len(df) == len(color_vector), 'len(df) and len(color_vector) must be the same size.'
         n_colors = len(np.unique(color_vector))
         colors = iter(cm.rainbow(np.linspace(0, 1, n_colors)))
 
@@ -484,13 +484,13 @@ def plot_pca(df, components=[1, 2], figsize=(8, 5),
 
     # PCA
     if to_scale:
-        arr = StandardScaler().fit_transform(df.values)
+        xx = StandardScaler().fit_transform(df.values)
     else:
-        arr = df.values
+        xx = df.values
 
     n_components = max(components)
     pca_obj = PCA(n_components=n_components)
-    pca = pca_obj.fit_transform(arr)
+    pca = pca_obj.fit_transform(xx)
     pc0 = components[0] - 1
     pc1 = components[1] - 1
 
@@ -499,8 +499,6 @@ def plot_pca(df, components=[1, 2], figsize=(8, 5),
 
     if (color_vector is not None) and (marker_vector is not None):
         for i, marker in enumerate(np.unique(marker_vector)):
-            colors = iter(cm.rainbow(np.linspace(0, 1, n_colors)))
-
             for color in np.unique(color_vector):
                 # print(i, 'marker:', marker, 'color:', color)
                 idx = (marker_vector == marker) & (color_vector == color)
@@ -532,11 +530,13 @@ def plot_pca(df, components=[1, 2], figsize=(8, 5),
         ax.scatter(pca[:, pc0], pca[:, pc1], alpha=0.7,
                    marker='s', edgecolors='black', color='blue')
 
-    if title: ax.set_title(title)
+    if title:
+        ax.set_title(title)
     ax.set_xlabel('PC'+str(components[0]))
     ax.set_ylabel('PC'+str(components[1]))
-    ax.legend(loc='lower left', bbox_to_anchor= (1.01, 0.0), ncol=1,
+    ax.legend(loc='lower left', bbox_to_anchor=(1.01, 0.0), ncol=1,
               borderaxespad=0, frameon=True)
+    plt.grid(True)
 
     if verbose:
         print('Explained variance by PCA components [{}, {}]:  [{:.5f}, {:.5f}]'.format(
